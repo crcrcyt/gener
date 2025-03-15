@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>作文生成器</title>
+    <style>
+        body {
+            background: linear-gradient(120deg, #74EBD5, #9FACE6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            transition: all 0.5s ease-in-out;
+            overflow: hidden;
+        }
+
+        .wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 90%;
+            max-width: 600px;
+            transition: all 0.5s ease-in-out;
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.3);
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur(10px);
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            transition: all 0.5s ease-in-out;
+        }
+
+        input, button {
+            margin: 10px 0;
+            padding: 12px;
+            border-radius: 10px;
+            border: none;
+            font-size: 1rem;
+            width: 100%;
+            text-align: center;
+            transition: transform 0.3s ease-in-out;
+        }
+
+        input:focus {
+            transform: scale(1.05);
+        }
+
+        button {
+            background: #ff7eb3;
+            color: white;
+            cursor: pointer;
+            transition: background 0.3s, transform 0.3s;
+            font-weight: bold;
+        }
+
+        button:hover {
+            background: #ff3c7e;
+            transform: scale(1.05);
+        }
+
+        .result-container {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            max-width: 600px;
+            transition: all 0.5s ease-in-out;
+        }
+
+        .result {
+            width: 100%;
+            padding: 20px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+            opacity: 0;
+            animation: fadeIn 1s ease-in-out forwards;
+            overflow-y: auto;
+            max-height: 400px;
+            line-height: 1.6;
+            font-size: 1rem;
+            white-space: pre-wrap;
+            margin-top: 20px;
+        }
+
+        .shorten-btn {
+            display: none;
+            margin-top: 10px;
+            background: #4CAF50;
+            color: white;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .two-column {
+            flex-direction: row;
+            justify-content: space-between;
+            max-width: 1000px;
+        }
+
+        .container, .result-container {
+            width: 48%;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="wrapper" id="wrapper">
+        <div class="container">
+            <h1>作文生成器</h1>
+            <input id="title" type="text" placeholder="作文標題">
+            <input id="minWords" type="number" placeholder="字數下限">
+            <input id="maxWords" type="number" placeholder="字數上限">
+            <input id="numParagraphs" type="number" placeholder="段落數" min="1" onchange="generateParagraphInputs()">
+            <div id="paragraphInputs"></div>
+            <button onclick="generateEssay()">生成作文</button>
+        </div>
+
+        <div class="result-container" id="result-container">
+            <div class="result" id="result">這裡將顯示生成的作文</div>
+            <button class="shorten-btn" id="shorten-btn" onclick="shortenEssay()">精簡內容</button>
+        </div>
+    </div>
+
+    <script>
+        function generateParagraphInputs() {
+            let numParagraphs = document.getElementById("numParagraphs").value;
+            let paragraphInputs = document.getElementById("paragraphInputs");
+            paragraphInputs.innerHTML = "";
+            for (let i = 1; i <= numParagraphs; i++) {
+                let input = document.createElement("input");
+                input.type = "text";
+                input.placeholder = `第 ${i} 段要求`;
+                input.className = "paragraph-input";
+                paragraphInputs.appendChild(input);
+            }
+        }
+
+        async function generateEssay() {
+            let title = document.getElementById("title").value;
+            let minWords = document.getElementById("minWords").value;
+            let maxWords = document.getElementById("maxWords").value;
+            let paragraphInputs = document.querySelectorAll(".paragraph-input");
+            let paragraphs = Array.from(paragraphInputs).map(input => input.value);
+
+            let response = await fetch("http://localhost:3000/generate", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ title, minWords, maxWords, paragraphs })
+            });
+
+            let data = await response.json();
+            let resultDiv = document.getElementById("result");
+            let wrapper = document.getElementById("wrapper");
+            let resultContainer = document.getElementById("result-container");
+            let shortenBtn = document.getElementById("shorten-btn");
+
+            resultDiv.style.display = "block";
+            resultDiv.innerText = data.essay;
+
+            wrapper.classList.add("two-column");
+            resultContainer.style.display = "flex";
+            shortenBtn.style.display = "block";
+        }
+
+        async function shortenEssay() {
+            let originalEssay = document.getElementById("result").innerText;
+
+            let response = await fetch("http://localhost:3000/shorten", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ text: originalEssay })
+            });
+
+            let data = await response.json();
+            let resultDiv = document.getElementById("result");
+
+            resultDiv.innerText = data.shortened;
+        }
+    </script>
+
+</body>
+</html>
